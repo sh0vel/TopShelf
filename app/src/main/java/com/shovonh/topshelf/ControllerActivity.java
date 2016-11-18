@@ -15,6 +15,7 @@ public class ControllerActivity extends AppCompatActivity implements AllListsFra
     FragmentManager fm;
     Fragment mAllListsFragment;
     Fragment mItemsinListFragment;
+    FloatingActionButton fab;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,7 +31,7 @@ public class ControllerActivity extends AppCompatActivity implements AllListsFra
         fm.beginTransaction().add(R.id.fragmentContainer, mAllListsFragment).commit();
 
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -39,9 +40,6 @@ public class ControllerActivity extends AppCompatActivity implements AllListsFra
             }
         });
     }
-
-
-
 
 
 
@@ -70,6 +68,7 @@ public class ControllerActivity extends AppCompatActivity implements AllListsFra
     @Override
     public void onBackPressed() {
         if (fm.getBackStackEntryCount() > 0 ){
+            fab.show();
             fm.popBackStack();
         } else {
             super.onBackPressed();
@@ -78,6 +77,7 @@ public class ControllerActivity extends AppCompatActivity implements AllListsFra
 
     @Override
     public void openList() {
+        fab.hide();
         fm.beginTransaction().addToBackStack("").replace(R.id.fragmentContainer, mItemsinListFragment).commit();
     }
 
