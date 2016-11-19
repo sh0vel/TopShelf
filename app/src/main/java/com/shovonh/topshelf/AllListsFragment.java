@@ -3,14 +3,25 @@ package com.shovonh.topshelf;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.CardView;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.TextView;
+
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.ValueEventListener;
+import com.rengwuxian.materialedittext.MaterialEditText;
+
+import org.parceler.Parcels;
+
+import java.util.ArrayList;
 
 
 /**
@@ -23,6 +34,10 @@ import android.widget.TextView;
  */
 public class AllListsFragment extends Fragment {
     CardView shoppingList;
+    RecyclerView mRecyclerView;
+    ContentAdapter mContentAdapter;
+
+    ArrayList<Lists> mAllLists;
 
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
@@ -39,21 +54,14 @@ public class AllListsFragment extends Fragment {
         // Required empty public constructor
     }
 
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment AllListsFragment.
-     */
     // TODO: Rename and change types and number of parameters
-    public static AllListsFragment newInstance() {
+    public static AllListsFragment newInstance(ArrayList list) {
         AllListsFragment fragment = new AllListsFragment();
-//        Bundle args = new Bundle();
-//        args.putString(ARG_PARAM1, param1);
+       Bundle args = new Bundle();
+        Parcelable wrapped = Parcels.wrap(list);
+       args.putParcelable(ARG_PARAM1, wrapped);
 //        args.putString(ARG_PARAM2, param2);
-//        fragment.setArguments(args);
+        fragment.setArguments(args);
         return fragment;
     }
 
@@ -61,7 +69,8 @@ public class AllListsFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
+
+            mAllLists = Parcels.unwrap(getArguments().getParcelable(ARG_PARAM1));
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
     }
@@ -72,37 +81,94 @@ public class AllListsFragment extends Fragment {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.all_lists, container, false);
         shoppingList = (CardView) view.findViewById(R.id.shopping_list_card);
+        final TextView tv = (TextView) view.findViewById(R.id.shopping_list_card).findViewById(R.id.list_name);
+        tv.setText("Shopping List");
         shoppingList.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                listItemPressed();
+                listItemPressed(tv.getText().toString());
+            }
+        });
+
+        mRecyclerView = (RecyclerView) view.findViewById(R.id.recycleview_lists);
+        mContentAdapter = new ContentAdapter();
+
+        mRecyclerView.setAdapter(mContentAdapter);
+        mRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
+
+        Database.getDBRef().getReference("lists").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                Lists l = dataSnapshot.getValue(Lists.class);
+                System.out.println(l);
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
             }
         });
 
         return view;
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder{
-        public TextView itemName;
-        public CheckBox checkBox;
-        public ViewHolder(LayoutInflater inflater, ViewGroup parent){
-            super(inflater.inflate(R.layout.item_listitem, parent, false));
-            itemName = (TextView) itemView.findViewById(R.id.item_name);
-            checkBox = (CheckBox) itemView.findViewById(R.id.item_checkbox);
+    public class ViewHolder extends RecyclerView.ViewHolder {
+        public TextView itemName, itemsPreview, itemCount;
+
+        public ViewHolder(LayoutInflater inflater, ViewGroup parent) {
+            super(inflater.inflate(R.layout.list_listitem, parent, false));
+            itemName = (TextView) itemView.findViewById(R.id.list_name);
+            itemsPreview = (TextView) itemView.findViewById(R.id.list_preview_items);
+            itemCount = (TextView) itemView.findViewById(R.id.list_item_count);
             itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-
+                    listItemPressed(itemName.getText().toString());
                 }
             });
         }
     }
 
+    public class ContentAdapter extends RecyclerView.Adapter<ViewHolder> {
+        ArrayList<Lists> mItemsInList = new ArrayList<>();
 
-    public void listItemPressed(){
-        if(mListener != null)
-            mListener.openList();
-        System.out.println("pressed");
+        public ContentAdapter() {
+            for (Lists l : mAllLists)
+                mItemsInList.add(l);
+        }
+
+        @Override
+        public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            return new ViewHolder(LayoutInflater.from(parent.getContext()), parent);
+        }
+
+        @Override
+        public void onBindViewHolder(ViewHolder holder, int position) {
+            holder.itemName.setText(mItemsInList.get(position).getName());
+        }
+
+        @Override
+        public int getItemCount() {
+            return mItemsInList.size();
+        }
+
+        public void addItem(Lists l) {
+             mItemsInList.add(l);
+            notifyItemInserted(mItemsInList.size() - 1);
+        }
+    }
+
+
+    public void listItemPressed(String listName) {
+        if (mListener != null)
+            mListener.openList(listName);
+    }
+
+    public void createList(String listName){
+        Lists l = new Lists(listName);
+        Database.getDBRef().getReference("lists").push().setValue(l);
+        //System.out.println(Database.getDBRef().getReference().push().getKey());
+        mContentAdapter.addItem(l);
     }
 
     @Override
@@ -114,6 +180,11 @@ public class AllListsFragment extends Fragment {
             throw new RuntimeException(context.toString()
                     + " must implement OnFragmentInteractionListener");
         }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
     }
 
     @Override
@@ -133,6 +204,6 @@ public class AllListsFragment extends Fragment {
      * >Communicating with Other Fragments</a> for more information.
      */
     public interface OnFragmentInteractionListener {
-        void openList();
+        void openList(String listName);
     }
 }
