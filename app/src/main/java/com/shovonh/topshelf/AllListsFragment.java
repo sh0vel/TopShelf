@@ -1,7 +1,6 @@
 package com.shovonh.topshelf;
 
 import android.content.Context;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.support.v4.app.Fragment;
@@ -11,42 +10,25 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CheckBox;
 import android.widget.TextView;
 
+import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.ValueEventListener;
-import com.rengwuxian.materialedittext.MaterialEditText;
 
 import org.parceler.Parcels;
 
 import java.util.ArrayList;
 
 
-/**
- * A simple {@link Fragment} subclass.
- * Activities that contain this fragment must implement the
- * {@link AllListsFragment.OnFragmentInteractionListener} interface
- * to handle interaction events.
- * Use the {@link AllListsFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
 public class AllListsFragment extends Fragment {
     CardView shoppingList;
     RecyclerView mRecyclerView;
     ContentAdapter mContentAdapter;
 
-    ArrayList<Lists> mAllLists;
-
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
-
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
+    ArrayList<Lists> mAllLists = new ArrayList<>();
+    Lists mMainList;
 
     private OnFragmentInteractionListener mListener;
 
@@ -55,12 +37,9 @@ public class AllListsFragment extends Fragment {
     }
 
     // TODO: Rename and change types and number of parameters
-    public static AllListsFragment newInstance(ArrayList list) {
+    public static AllListsFragment newInstance(ArrayList list, Lists mainList) {
         AllListsFragment fragment = new AllListsFragment();
-       Bundle args = new Bundle();
-        Parcelable wrapped = Parcels.wrap(list);
-       args.putParcelable(ARG_PARAM1, wrapped);
-//        args.putString(ARG_PARAM2, param2);
+        Bundle args = new Bundle();
         fragment.setArguments(args);
         return fragment;
     }
@@ -69,10 +48,49 @@ public class AllListsFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
-
-            mAllLists = Parcels.unwrap(getArguments().getParcelable(ARG_PARAM1));
-            mParam2 = getArguments().getString(ARG_PARAM2);
         }
+
+        Database.getDBRef().getReference("lists").addChildEventListener(
+                new ChildEventListener() {
+
+                    @Override
+                    public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                        Lists l = dataSnapshot.getValue(Lists.class);
+                        mContentAdapter.addItem(l);
+//                        StringBuilder builder = new StringBuilder();
+//                        Lists lit = dataSnapshot.getValue(Lists.class);
+//                        builder.append("List name: ").append(lit.getName()).append(" items: ");
+//                        for (Item i : lit.getItemsInList()){
+//                            builder.append(i.getName() + ", ");
+//                        }
+                        //System.out.println(builder.toString());
+                        //for (DataSnapshot data : dataSnapshot.getChildren()) {
+                        // System.err.println("!!!!!!" + data.getValue());
+
+                        //}
+                    }
+
+                    @Override
+                    public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+                        //System.out.println("!!!!!!!!!!!!!!!!!!!!!!" + dataSnapshot.getValue() +":::" + s);
+                    }
+
+                    @Override
+                    public void onChildRemoved(DataSnapshot dataSnapshot) {
+
+                    }
+
+                    @Override
+                    public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+
+                    }
+                }
+        );
     }
 
     @Override
@@ -86,7 +104,7 @@ public class AllListsFragment extends Fragment {
         shoppingList.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                listItemPressed(tv.getText().toString());
+                listItemPressed(mMainList);
             }
         });
 
@@ -123,18 +141,18 @@ public class AllListsFragment extends Fragment {
             itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    listItemPressed(itemName.getText().toString());
+                    listItemPressed(mAllLists.get(getAdapterPosition()));
+
                 }
             });
         }
     }
 
     public class ContentAdapter extends RecyclerView.Adapter<ViewHolder> {
-        ArrayList<Lists> mItemsInList = new ArrayList<>();
+        //ArrayList<Lists> mItemsInList = new ArrayList<>();
 
         public ContentAdapter() {
-            for (Lists l : mAllLists)
-                mItemsInList.add(l);
+
         }
 
         @Override
@@ -144,31 +162,29 @@ public class AllListsFragment extends Fragment {
 
         @Override
         public void onBindViewHolder(ViewHolder holder, int position) {
-            holder.itemName.setText(mItemsInList.get(position).getName());
+            holder.itemName.setText(mAllLists.get(position).getName());
         }
 
         @Override
         public int getItemCount() {
-            return mItemsInList.size();
+            return mAllLists.size();
         }
 
         public void addItem(Lists l) {
-             mItemsInList.add(l);
-            notifyItemInserted(mItemsInList.size() - 1);
+             mAllLists.add(l);
+            notifyItemInserted(mAllLists.size() - 1);
         }
     }
 
 
-    public void listItemPressed(String listName) {
+    public void listItemPressed(Lists li) {
         if (mListener != null)
-            mListener.openList(listName);
+            mListener.openList(li);
     }
 
     public void createList(String listName){
         Lists l = new Lists(listName);
-        Database.getDBRef().getReference("lists").push().setValue(l);
-        //System.out.println(Database.getDBRef().getReference().push().getKey());
-        mContentAdapter.addItem(l);
+        Database.getDBRef().getReference("lists").child(listName).setValue(l);
     }
 
     @Override
@@ -193,17 +209,7 @@ public class AllListsFragment extends Fragment {
         mListener = null;
     }
 
-    /**
-     * This interface must be implemented by activities that contain this
-     * fragment to allow an interaction in this fragment to be communicated
-     * to the activity and potentially other fragments contained in that
-     * activity.
-     * <p>
-     * See the Android Training lesson <a href=
-     * "http://developer.android.com/training/basics/fragments/communicating.html"
-     * >Communicating with Other Fragments</a> for more information.
-     */
     public interface OnFragmentInteractionListener {
-        void openList(String listName);
+        void openList(Lists li);
     }
 }

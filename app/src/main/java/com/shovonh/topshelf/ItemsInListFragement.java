@@ -1,7 +1,6 @@
 package com.shovonh.topshelf;
 
 import android.content.Context;
-import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
@@ -11,28 +10,28 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
-import android.widget.CheckBox;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.ValueEventListener;
 import com.hanks.library.AnimateCheckBox;
 import com.rengwuxian.materialedittext.MaterialEditText;
 
+import org.parceler.Parcels;
+
 import java.util.ArrayList;
 
-/**
- * A simple {@link Fragment} subclass.
- * Activities that contain this fragment must implement the
- * {@link ItemsInListFragement.OnFragmentInteractionListener} interface
- * to handle interaction events.
- * Use the {@link ItemsInListFragement#newInstance} factory method to
- * create an instance of this fragment.
- */
+
 public class ItemsInListFragement extends Fragment {
     RecyclerView mRecyclerView;
     ContentAdapter mContentAdapter;
     MaterialEditText mEditText;
     ImageButton mImgButton;
+
+    Lists mCurrentList;
 
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
@@ -40,7 +39,7 @@ public class ItemsInListFragement extends Fragment {
     private static final String ARG_PARAM2 = "param2";
 
     // TODO: Rename and change types of parameters
-    private String mParam1;
+    private String listName;
     private String mParam2;
 
     private OnFragmentInteractionListener mListener;
@@ -49,18 +48,11 @@ public class ItemsInListFragement extends Fragment {
         // Required empty public constructor
     }
 
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment ItemsInListFragement.
-     */
-    // TODO: Rename and change types and number of parameters
-    public static ItemsInListFragement newInstance() {
+
+    public static ItemsInListFragement newInstance(Lists openedLists) {
         ItemsInListFragement fragment = new ItemsInListFragement();
         Bundle args = new Bundle();
+        args.putParcelable(ARG_PARAM1, Parcels.wrap(openedLists));
         fragment.setArguments(args);
         return fragment;
     }
@@ -69,9 +61,42 @@ public class ItemsInListFragement extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
+            mCurrentList = Parcels.unwrap(getArguments().getParcelable(ARG_PARAM1));
+
+            //System.out.println("nombre = " + mCurrentList.getName());
+
+            Database.getDBRef().getReference(mCurrentList.name).addChildEventListener(
+                    new ChildEventListener() {
+                        @Override
+                        public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                            Item i = dataSnapshot.child("itemsInList").getValue(Item.class);
+                            System.out.println(i.getName());
+                            //TODO: put items into datbase
+
+                        }
+
+                        @Override
+                        public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+
+                        }
+
+                        @Override
+                        public void onChildRemoved(DataSnapshot dataSnapshot) {
+
+                        }
+
+                        @Override
+                        public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+                        }
+
+                        @Override
+                        public void onCancelled(DatabaseError databaseError) {
+
+                        }
+                    });
         }
+
     }
 
     @Override
@@ -89,7 +114,13 @@ public class ItemsInListFragement extends Fragment {
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
                 boolean handled = false;
                 if (actionId == EditorInfo.IME_ACTION_DONE) {
-                    mContentAdapter.addItem(mEditText.getText().toString());
+                    Item i = new Item(mEditText.getText().toString());
+                    Database.getDBRef().getReference("lists").child(mCurrentList.getName())
+                            .child("itemsInList").child(mCurrentList.getItemsInList().size() + "")
+                            .setValue(i);
+
+
+                    mCurrentList.getItemsInList().add(i);
                     mEditText.setText("");
                     handled = true;
                 }
@@ -105,7 +136,7 @@ public class ItemsInListFragement extends Fragment {
         return view;
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
+    public class ViewHolder extends RecyclerView.ViewHolder {
         public TextView itemName;
         public AnimateCheckBox checkBox;
 
@@ -122,18 +153,10 @@ public class ItemsInListFragement extends Fragment {
         }
     }
 
-    public static class ContentAdapter extends RecyclerView.Adapter<ViewHolder> {
-
-
-        //
-        ArrayList mItemsInList = new ArrayList();
-
+    public class ContentAdapter extends RecyclerView.Adapter<ViewHolder> {
         public ContentAdapter() {
-            mItemsInList.add("Apples");
-            mItemsInList.add("Bannannannnas");
-            mItemsInList.add("Pinapples");
-        }
 
+        }
 
         @Override
         public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
@@ -142,18 +165,20 @@ public class ItemsInListFragement extends Fragment {
 
         @Override
         public void onBindViewHolder(ViewHolder holder, int position) {
-            holder.itemName.setText(mItemsInList.get(position).toString());
+            holder.itemName.setText(mCurrentList.getItemsInList().get(position).getName());
         }
 
         @Override
         public int getItemCount() {
-            return mItemsInList.size();
+            return mCurrentList.getItemsInList().size();
         }
 
-        public void addItem(String item) {
-            mItemsInList.add(item);
-            notifyItemInserted(mItemsInList.size() - 1);
+        public void addItem(Item i) {
+            mCurrentList.getItemsInList().add(i);
+            notifyItemInserted(mCurrentList.getItemsInList().size() - 1);
         }
+
+
     }
 
 

@@ -20,6 +20,8 @@ android {
     }
 }
 
+apply plugin: 'com.neenbedankt.android-apt'
+
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
@@ -35,5 +37,12 @@ dependencies {
     testCompile 'junit:junit:4.12'
     compile 'com.google.firebase:firebase-auth:9.8.0'
     compile 'com.google.android.gms:play-services-auth:9.8.0'
+    compile 'com.google.firebase:firebase-database:9.8.0'
+
+    compile 'org.parceler:parceler-api:1.1.6'
+    apt 'org.parceler:parceler:1.1.6'
+
+    androidTestApt 'com.github.frankiesardo:android-auto-value-processor:0.1'
+    androidTestCompile 'com.github.frankiesardo:android-auto-value:0.1'
 }
 apply plugin: 'com.google.gms.google-services'
