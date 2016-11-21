@@ -33,7 +33,6 @@ public class ControllerActivity extends AppCompatActivity implements AllListsFra
     Fragment mAllListsFragment;
     Fragment mItemsinListFragment;
     FloatingActionButton fab;
-    FirebaseDatabase database = FirebaseDatabase.getInstance();
     Lists mMainList;
 
     public static ArrayList<Lists> mAllLists = new ArrayList<>();
@@ -45,80 +44,14 @@ public class ControllerActivity extends AppCompatActivity implements AllListsFra
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-
-//        mAllLists = Parcels.unwrap(getIntent().getBundleExtra("alllists"));
-//        mMainList = Parcels.unwrap(getIntent().getBundleExtra("mainlist"));
-
-
-        mAllListsFragment = AllListsFragment.newInstance(mAllLists, mMainList);
+        mAllListsFragment = AllListsFragment.newInstance();
 
         fm = getSupportFragmentManager();
         fm.beginTransaction().add(R.id.fragmentContainer, mAllListsFragment).commit();
 
 
         fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                final Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
-
-                View v = getLayoutInflater().inflate(R.layout.dialogtext, null);
-                final MaterialEditText et = (MaterialEditText) v.findViewById(R.id.dialog_list_title);
-                final AlertDialog.Builder builder = new AlertDialog.Builder(ControllerActivity.this);
-                builder.setTitle("New Lists").setView(v).setPositiveButton("Done", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        if (et.getText() != null) {
-                            ((AllListsFragment) currentFragment).createList(et.getText().toString());
-                        }
-                    }
-                }).setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-
-                    }
-                });
-
-                builder.show();
-            }
-        });
-
-//        Database.getDBRef().getReference("main_list").addChildEventListener(new ChildEventListener() {
-//            @Override
-//            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-//
-//                System.err.println("!!!!!!" + dataSnapshot.getValue());
-//
-//
-//            }
-//
-//            @Override
-//            public void onChildChanged(DataSnapshot dataSnapshot, String s) {
-//
-//            }
-//
-//            @Override
-//            public void onChildRemoved(DataSnapshot dataSnapshot) {
-//
-//            }
-//
-//            @Override
-//            public void onChildMoved(DataSnapshot dataSnapshot, String s) {
-//
-//            }
-//
-//            @Override
-//            public void onCancelled(DatabaseError databaseError) {
-//
-//            }
-//
-//        });
-
-
-
-
-
-
+        setFabForNewLists();
 
     }
 
@@ -149,6 +82,7 @@ public class ControllerActivity extends AppCompatActivity implements AllListsFra
         if (fm.getBackStackEntryCount() > 0) {
             fab.show();
             fm.popBackStack();
+            setFabForNewLists();
         } else {
             super.onBackPressed();
         }
@@ -160,6 +94,52 @@ public class ControllerActivity extends AppCompatActivity implements AllListsFra
         mItemsinListFragment = new ItemsInListFragement().newInstance(li);
         fm.beginTransaction().addToBackStack("").replace(R.id.fragmentContainer, mItemsinListFragment).commit();
 
+    }
+
+    @Override
+    public void enableDeleteFab() {
+        fab.setImageResource(R.drawable.ic_clear_24dp);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ((ItemsInListFragement) mItemsinListFragment).deleteAllCheckedItems();
+            }
+        });
+        fab.show();
+    }
+
+    @Override
+    public void disableDeleteFab() {
+        fab.hide();
+    }
+
+    void setFabForNewLists(){
+        fab.setImageResource(R.drawable.ic_add_circle_outline_black_24dp);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                final Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
+
+                View v = getLayoutInflater().inflate(R.layout.dialogtext, null);
+                final MaterialEditText et = (MaterialEditText) v.findViewById(R.id.dialog_list_title);
+                final AlertDialog.Builder builder = new AlertDialog.Builder(ControllerActivity.this);
+                builder.setTitle("New Lists").setView(v).setPositiveButton("Done", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        if (et.getText() != null) {
+                            ((AllListsFragment) currentFragment).createList(et.getText().toString());
+                        }
+                    }
+                }).setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+
+                    }
+                });
+
+                builder.show();
+            }
+        });
     }
 
     public void setUpAllLists() {

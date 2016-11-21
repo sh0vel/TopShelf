@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -26,10 +27,14 @@ import java.util.ArrayList;
 
 
 public class ItemsInListFragement extends Fragment {
+    private static final String TAG = AllListsFragment.class.getSimpleName();
+
     RecyclerView mRecyclerView;
     ContentAdapter mContentAdapter;
     MaterialEditText mEditText;
     ImageButton mImgButton;
+
+    boolean mDeleteFabEnabled = false;
 
     Lists mCurrentList;
 
@@ -65,24 +70,60 @@ public class ItemsInListFragement extends Fragment {
 
             //System.out.println("nombre = " + mCurrentList.getName());
 
-            Database.getDBRef().getReference(mCurrentList.name).addChildEventListener(
+//            Database.getDBRef().getReference(mCurrentList.name).child("itemsInList").addChildEventListener(
+//                    new ChildEventListener() {
+//                        @Override
+//                        public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+//
+//
+//
+//                        }
+//
+//                        @Override
+//                        public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+//                            Item i = dataSnapshot.getValue(Item.class);
+//                            //mCurrentList.getItemsInList().add(i);
+//                            System.out.println("Items"+i.getName().toString());
+//                        }
+//
+//                        @Override
+//                        public void onChildRemoved(DataSnapshot dataSnapshot) {
+//
+//                        }
+//
+//                        @Override
+//                        public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+//
+//                        }
+//
+//                        @Override
+//                        public void onCancelled(DatabaseError databaseError) {
+//
+//                        }
+//                    });
+
+            Database.getDBRef().getReference("lists").addChildEventListener(
                     new ChildEventListener() {
+
                         @Override
                         public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-                            Item i = dataSnapshot.child("itemsInList").getValue(Item.class);
-                            System.out.println(i.getName());
-                            //TODO: put items into datbase
+//                            System.out.println("added");
+//                            Item i = dataSnapshot.getValue(Item.class);
+//                            mContentAdapter.addItem(i);
 
                         }
 
                         @Override
                         public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+                            Lists l = dataSnapshot.getValue(Lists.class);
+                            mCurrentList = l;
+                            mContentAdapter.updateList();
 
                         }
 
                         @Override
                         public void onChildRemoved(DataSnapshot dataSnapshot) {
-
+                            System.out.println("removed");
                         }
 
                         @Override
@@ -94,7 +135,8 @@ public class ItemsInListFragement extends Fragment {
                         public void onCancelled(DatabaseError databaseError) {
 
                         }
-                    });
+                    }
+            );
         }
 
     }
@@ -118,9 +160,6 @@ public class ItemsInListFragement extends Fragment {
                     Database.getDBRef().getReference("lists").child(mCurrentList.getName())
                             .child("itemsInList").child(mCurrentList.getItemsInList().size() + "")
                             .setValue(i);
-
-
-                    mCurrentList.getItemsInList().add(i);
                     mEditText.setText("");
                     handled = true;
                 }
@@ -148,6 +187,10 @@ public class ItemsInListFragement extends Fragment {
                 @Override
                 public void onClick(View v) {
                     checkBox.setChecked(!checkBox.isChecked());
+                    mCurrentList.getItemsInList().get(getAdapterPosition()).toggleChecked();
+                    Database.getDBRef().getReference("lists").child(mCurrentList.getName())
+                            .child("itemsInList").child(getAdapterPosition() + "")
+                            .setValue(mCurrentList.getItemsInList().get(getAdapterPosition()));
                 }
             });
         }
@@ -155,7 +198,7 @@ public class ItemsInListFragement extends Fragment {
 
     public class ContentAdapter extends RecyclerView.Adapter<ViewHolder> {
         public ContentAdapter() {
-
+            System.out.println("mCurrentList: " + mCurrentList.getName());
         }
 
         @Override
@@ -165,7 +208,15 @@ public class ItemsInListFragement extends Fragment {
 
         @Override
         public void onBindViewHolder(ViewHolder holder, int position) {
-            holder.itemName.setText(mCurrentList.getItemsInList().get(position).getName());
+            Item i = mCurrentList.getItemsInList().get(position);
+            holder.itemName.setText(i.getName());
+            holder.checkBox.setChecked(i.checked);
+
+            if (mCurrentList.anyItemsChecked())
+                enableDeleteFab();
+            else
+                disableDeleteFab();
+
         }
 
         @Override
@@ -178,7 +229,40 @@ public class ItemsInListFragement extends Fragment {
             notifyItemInserted(mCurrentList.getItemsInList().size() - 1);
         }
 
+        public void updateList() {
+            notifyDataSetChanged();
+        }
 
+
+    }
+
+    public void deleteAllCheckedItems(){
+        ArrayList<Item> al = mCurrentList.getItemsInList();
+        ArrayList toRemove = new ArrayList();
+        for (Item i : al ) {
+            if (i.checked) {
+                Log.v(TAG, "Index:" + al.indexOf(i) + " Name: " + i.getName());
+                toRemove.add(i);
+            }
+        }
+        mCurrentList.getItemsInList().removeAll(toRemove);
+        Database.getDBRef().getReference("lists").child(mCurrentList.getName())
+                .child("itemsInList").setValue(al);
+        disableDeleteFab();
+    }
+
+    void enableDeleteFab() {
+        if (mListener != null) {
+            mListener.enableDeleteFab();
+            mDeleteFabEnabled = true;
+        }
+    }
+
+    void disableDeleteFab() {
+        if (mListener != null) {
+            mListener.disableDeleteFab();
+            mDeleteFabEnabled = false;
+        }
     }
 
 
@@ -199,17 +283,9 @@ public class ItemsInListFragement extends Fragment {
         mListener = null;
     }
 
-    /**
-     * This interface must be implemented by activities that contain this
-     * fragment to allow an interaction in this fragment to be communicated
-     * to the activity and potentially other fragments contained in that
-     * activity.
-     * <p>
-     * See the Android Training lesson <a href=
-     * "http://developer.android.com/training/basics/fragments/communicating.html"
-     * >Communicating with Other Fragments</a> for more information.
-     */
     public interface OnFragmentInteractionListener {
+        void enableDeleteFab();
 
+        void disableDeleteFab();
     }
 }

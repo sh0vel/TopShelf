@@ -14,8 +14,10 @@ public class Database {
     }
 
     public static FirebaseDatabase getDBRef(){
-        if (db == null)
+        if (db == null) {
             db = FirebaseDatabase.getInstance();
+            db.setPersistenceEnabled(true);
+        }
         return  db;
     }
 }

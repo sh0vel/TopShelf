@@ -26,9 +26,7 @@
         <activity
             android:name=".SignInActivity"
             android:label="@string/title_activity_sign_in" />
-        <activity android:name=".BootActivity">
-
-        </activity>
+        <activity android:name=".BootActivity"></activity>
     </application>
 
 </manifest>

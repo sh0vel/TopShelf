@@ -18,11 +18,11 @@ public class Lists {
     public ArrayList<Item> itemsInList;
 
 
-    public Lists(){
+    public Lists() {
 
     }
 
-    public Lists(String name){
+    public Lists(String name) {
         this.name = name;
         itemsInList = new ArrayList<>();
     }
@@ -36,28 +36,23 @@ public class Lists {
     }
 
     public ArrayList<Item> getItemsInList() {
+        if (itemsInList != null)
+            return itemsInList;
+        else
+            itemsInList = new ArrayList<>();
         return itemsInList;
     }
 
     public void setItemsInList(ArrayList<Item> itemsInList) {
         this.itemsInList = itemsInList;
     }
-    @Exclude
-    public Map<Integer, Item> toMap(){
-        HashMap<Integer, Item> result = new HashMap<>();
+
+    public boolean anyItemsChecked(){
         for (Item i : itemsInList)
-            result.put(itemsInList.indexOf(i), i);
-        return result;
+            if (i.checked)
+                return true;
+        return false;
     }
 
-    @Exclude
-    public static Map<String, Lists> listsToMap(ArrayList<Lists> ls){
-        HashMap<String, Lists> r = new HashMap<>();
-        for (Lists l : ls){
-            r.put(l.name, l);
-        }
-
-        return r;
-    }
 
 }

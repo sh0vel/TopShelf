@@ -6,6 +6,7 @@ package com.shovonh.topshelf;
 
 public class Item {
     String name;
+    boolean checked;
 
     public Item(){
 
@@ -13,9 +14,13 @@ public class Item {
 
     public Item(String name){
         this.name=name;
+        checked = false;
     }
 
     public String getName() {
         return name;
+    }
+    public void toggleChecked(){
+        checked = !checked;
     }
 }

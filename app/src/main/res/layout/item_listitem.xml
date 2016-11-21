@@ -12,7 +12,7 @@
         android:id="@+id/item_checkbox"
         android:layout_width="25dp"
         android:layout_height="25dp"
-        app:animDuration="300"
+        app:animDuration="200"
         app:checkedColor="@color/colorAccent"
         app:lineColor="#fff"
         app:lineWidth="1.2dp"
