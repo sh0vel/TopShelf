@@ -1,9 +1,12 @@
 package com.shovonh.topshelf;
 
+import org.parceler.Parcel;
+
 /**
  * Created by Shovon on 11/19/2016.
  */
 
+@Parcel
 public class Item {
     String name;
     boolean checked;
@@ -20,7 +23,8 @@ public class Item {
     public String getName() {
         return name;
     }
-    public void toggleChecked(){
+    public boolean toggleChecked(){
         checked = !checked;
+        return  checked;
     }
 }

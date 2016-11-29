@@ -8,7 +8,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Parcelable;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.CardView;
@@ -25,9 +25,6 @@ import android.widget.TextView;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.ValueEventListener;
-
-import org.parceler.Parcels;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -66,17 +63,17 @@ public class AllListsFragment extends Fragment {
         if (getArguments() != null) {
         }
 
-        Database.getDBRef().getReference("lists").addChildEventListener(
+        Database.getDB().getReference("users").child(User.getUid()).addChildEventListener(
                 new ChildEventListener() {
 
                     @Override
                     public void onChildAdded(DataSnapshot dataSnapshot, String s) {
                         Lists l = dataSnapshot.getValue(Lists.class);
-                        if (l.getName().equals("Shopping List")){
+                        if (l.getName().equals("Shopping List")) {
                             if (mMainList == null)
                                 mMainList = l;
                             updateMainList();
-                        }else
+                        } else
                             mContentAdapter.addItem(l);
 
                     }
@@ -84,13 +81,14 @@ public class AllListsFragment extends Fragment {
                     @Override
                     public void onChildChanged(DataSnapshot dataSnapshot, String s) {
                         Lists l = dataSnapshot.getValue(Lists.class);
+                        Log.e(TAG, "Changed");
                         if (l.getName().equals("Shopping List")) {
                             mMainList = l;
                             updateMainList();
                         } else
-                        mAllLists.get(mSelectionIndex).setItemsInList(l.getItemsInList());
-                        //TODO: handle renaming here
+                            mAllLists.get(mSelectionIndex).setItemsInList(l.getItemsInList());
                     }
+
                     @Override
                     public void onChildRemoved(DataSnapshot dataSnapshot) {
                         mContentAdapter.removedFromDB(mSelectionIndex);
@@ -98,8 +96,8 @@ public class AllListsFragment extends Fragment {
 
                     @Override
                     public void onChildMoved(DataSnapshot dataSnapshot, String s) {
-                        mAllLists.remove(dataSnapshot.getValue(Lists.class));
-                        mContentAdapter.updateList();
+//                        mAllLists.remove(dataSnapshot.getValue(Lists.class));
+//                        mContentAdapter.updateList();
                     }
 
                     @Override
@@ -123,9 +121,9 @@ public class AllListsFragment extends Fragment {
         shoppingList.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(mMainList == null){
+                if (mMainList == null) {
                     mMainList = new Lists("Shopping List");
-                    Database.getDBRef().getReference("lists").child(mMainList.getName()).setValue(mMainList);
+                    Database.getDB().getReference("users").child(User.getUid()).child(mMainList.getName()).setValue(mMainList);
                 }
                 listItemPressed(mMainList);
             }
@@ -142,9 +140,10 @@ public class AllListsFragment extends Fragment {
 
         return view;
     }
-    public void updateMainList(){
+
+    public void updateMainList() {
         ((TextView) shoppingList.findViewById(R.id.list_name)).setText("Shopping List");
-        if(mMainList != null) {
+        if (mMainList != null) {
             int count = mMainList.getItemsInList().size();
             ((TextView) shoppingList.findViewById(R.id.list_item_count)).setText(count + (count > 1 ? "\nItems" : "\nItem"));
             StringBuilder builder = new StringBuilder();
@@ -159,7 +158,7 @@ public class AllListsFragment extends Fragment {
         }
     }
 
-    public void setUpListText(){
+    public void setUpListText() {
 
     }
 
@@ -181,6 +180,29 @@ public class AllListsFragment extends Fragment {
 
                 }
             });
+            itemView.setOnLongClickListener(new View.OnLongClickListener(){
+                @Override
+                public boolean onLongClick(View v) {
+                    Lists l = mAllLists.get(getAdapterPosition());
+                    int size = mAllLists.size();
+                    for (Item i : l.getItemsInList()){
+                        Log.v(TAG, i.getName() + ", " + mMainList.getItemsInList().size());
+
+                        Database.getDB().getReference("users").child(User.getUid()).child(mMainList.getName())
+                                .child("itemsInList").child(mMainList.getItemsInList().size() + "")
+                                .setValue(i);
+                        mMainList.getItemsInList().add(i);
+                    }
+
+                    Snackbar snackbar = Snackbar.make
+                            (v, "Added " + l.getItemsInList().size() + " items to Shopping List", Snackbar.LENGTH_LONG);
+                    snackbar.show();
+
+                    return true;
+                }
+            });
+
+
         }
     }
 
@@ -207,10 +229,11 @@ public class AllListsFragment extends Fragment {
         @Override
         public void onBindViewHolder(ViewHolder holder, int position) {
             final Lists item = mAllLists.get(position);
-            Log.v(TAG, item.getName());
+            Log.e(TAG, item.getName() + " added at index " +position);
             int count = item.getItemsInList().size();
             holder.itemName.setText(item.getName());
-            holder.itemCount.setText(count + (count > 1?"\nItems":"\nItem"));
+            Log.e(TAG, "itemName = " +holder.itemName.getText());
+            holder.itemCount.setText(count + (count > 1 ? "\nItems" : "\nItem"));
             StringBuilder builder = new StringBuilder();
             if (count > 0)
                 builder.append(item.getItemsInList().get(0).getName());
@@ -222,7 +245,9 @@ public class AllListsFragment extends Fragment {
             holder.itemsPreview.setText(builder.toString());
 
 
+
             if (itemsPendingRemoval.contains(item)) {
+                Log.e(TAG, "itemsPendingRemoval");
                 // we need to show the "undo" state of the row
                 holder.itemView.setBackgroundColor(Color.RED);
                 holder.itemName.setVisibility(View.GONE);
@@ -242,13 +267,15 @@ public class AllListsFragment extends Fragment {
                         notifyItemChanged(mAllLists.indexOf(item));
                     }
                 });
+
             } else {
+                Log.e(TAG, "else statement");
                 // we need to show the "normal" state
                 holder.itemView.setBackgroundColor(Color.parseColor("#FAFAFA"));
                 holder.itemCount.setVisibility(View.VISIBLE);
                 holder.itemsPreview.setVisibility(View.VISIBLE);
                 holder.itemCount.setVisibility(View.VISIBLE);
-               // holder.titleTextView.setText(item);
+                // holder.titleTextView.setText(item);
                 holder.undoButton.setVisibility(View.GONE);
                 holder.undoButton.setOnClickListener(null);
             }
@@ -260,10 +287,11 @@ public class AllListsFragment extends Fragment {
         }
 
         public void addItem(Lists l) {
-             mAllLists.add(l);
+            mAllLists.add(l);
             notifyItemInserted(mAllLists.size() - 1);
         }
-        public void updateList(){
+
+        public void updateList() {
             notifyDataSetChanged();
         }
 
@@ -272,14 +300,16 @@ public class AllListsFragment extends Fragment {
         }
 
         public boolean isUndoOn() {
-            return undoOn;
+            return true;
         }
+
+
 
         public void pendingRemoval(int position) {
             final Lists item = mAllLists.get(position);
             if (!itemsPendingRemoval.contains(item)) {
                 itemsPendingRemoval.add(item);
-                // this will redraw row in "undo" state
+                // this will redraw rotw in "undo" state
                 notifyItemChanged(position);
                 // let's create, store and post a runnable to remove the item
                 Runnable pendingRemovalRunnable = new Runnable() {
@@ -299,16 +329,20 @@ public class AllListsFragment extends Fragment {
                 itemsPendingRemoval.remove(item);
             }
             if (mAllLists.contains(item)) {
-                Database.getDBRef().getReference("lists/"+item.name).removeValue();
+                Database.getDB().getReference("users").child(User.getUid()).child(item.getName()).removeValue();
                 mSelectionIndex = position;
-
             }
+
+
         }
 
-        public void removedFromDB(int position){
+        public void removedFromDB(int position) {
             mAllLists.remove(position);
             notifyItemRemoved(position);
+            notifyItemRangeChanged(position, getItemCount());
+            Log.e(TAG, "RemovedFromDB at position " + position);
         }
+
 
         public boolean isPendingRemoval(int position) {
             Lists item = mAllLists.get(position);
@@ -488,9 +522,9 @@ public class AllListsFragment extends Fragment {
             mListener.openList(li);
     }
 
-    public void createList(String listName){
+    public void createList(String listName) {
         Lists l = new Lists(listName);
-        Database.getDBRef().getReference("lists").child(listName).setValue(l);
+        Database.getDB().getReference("users").child(User.getUid()).child(listName).setValue(l);
     }
 
     @Override

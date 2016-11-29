@@ -13,7 +13,7 @@ public class Database {
 
     }
 
-    public static FirebaseDatabase getDBRef(){
+    public static FirebaseDatabase getDB(){
         if (db == null) {
             db = FirebaseDatabase.getInstance();
             db.setPersistenceEnabled(true);

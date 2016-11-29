@@ -15,7 +15,7 @@
             android:layout_width="match_parent"
             android:layout_height="72dp"
             android:ems="10"
-            android:hint="item name"
+            android:hint="Item Name"
             app:met_floatingLabel="highlight"
             android:imeOptions="actionDone"
             android:singleLine="true"

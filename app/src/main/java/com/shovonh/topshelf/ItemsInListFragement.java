@@ -10,6 +10,7 @@ import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
 import android.view.inputmethod.EditorInfo;
 import android.widget.ImageButton;
 import android.widget.TextView;
@@ -17,7 +18,6 @@ import android.widget.TextView;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.ValueEventListener;
 import com.hanks.library.AnimateCheckBox;
 import com.rengwuxian.materialedittext.MaterialEditText;
 
@@ -27,12 +27,20 @@ import java.util.ArrayList;
 
 
 public class ItemsInListFragement extends Fragment {
+    enum action{
+        deleted,
+        checked,
+        added
+    }
     private static final String TAG = AllListsFragment.class.getSimpleName();
 
     RecyclerView mRecyclerView;
     ContentAdapter mContentAdapter;
     MaterialEditText mEditText;
     ImageButton mImgButton;
+
+    action updateAction;
+    int checkedPosition;
 
     boolean mDeleteFabEnabled = false;
 
@@ -62,6 +70,7 @@ public class ItemsInListFragement extends Fragment {
         return fragment;
     }
 
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -70,7 +79,7 @@ public class ItemsInListFragement extends Fragment {
 
             //System.out.println("nombre = " + mCurrentList.getName());
 
-//            Database.getDBRef().getReference(mCurrentList.name).child("itemsInList").addChildEventListener(
+//            Database.getDB().getReference(mCurrentList.name).child("itemsInList").addChildEventListener(
 //                    new ChildEventListener() {
 //                        @Override
 //                        public void onChildAdded(DataSnapshot dataSnapshot, String s) {
@@ -102,7 +111,7 @@ public class ItemsInListFragement extends Fragment {
 //                        }
 //                    });
 
-            Database.getDBRef().getReference("lists").addChildEventListener(
+            Database.getDB().getReference("users").child(User.getUid()).addChildEventListener(
                     new ChildEventListener() {
 
                         @Override
@@ -117,7 +126,11 @@ public class ItemsInListFragement extends Fragment {
                         public void onChildChanged(DataSnapshot dataSnapshot, String s) {
                             Lists l = dataSnapshot.getValue(Lists.class);
                             mCurrentList = l;
-                            mContentAdapter.updateList();
+
+                            if (updateAction == action.checked)
+                                mContentAdapter.updateList(checkedPosition);
+                            else
+                                mContentAdapter.updateList();
 
                         }
 
@@ -156,8 +169,9 @@ public class ItemsInListFragement extends Fragment {
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
                 boolean handled = false;
                 if (actionId == EditorInfo.IME_ACTION_DONE) {
+                    updateAction = action.added;
                     Item i = new Item(mEditText.getText().toString());
-                    Database.getDBRef().getReference("lists").child(mCurrentList.getName())
+                    Database.getDB().getReference("users").child(User.getUid()).child(mCurrentList.getName())
                             .child("itemsInList").child(mCurrentList.getItemsInList().size() + "")
                             .setValue(i);
                     mEditText.setText("");
@@ -187,10 +201,18 @@ public class ItemsInListFragement extends Fragment {
                 @Override
                 public void onClick(View v) {
                     checkBox.setChecked(!checkBox.isChecked());
-                    mCurrentList.getItemsInList().get(getAdapterPosition()).toggleChecked();
-                    Database.getDBRef().getReference("lists").child(mCurrentList.getName())
+                    updateAction = action.checked;
+                    checkedPosition = getAdapterPosition();
+                    Item i = mCurrentList.getItemsInList().get(getAdapterPosition());
+//                    i.toggleChecked();
+
+                    Database.getDB().getReference("users").child(User.getUid()).child(mCurrentList.getName())
                             .child("itemsInList").child(getAdapterPosition() + "")
-                            .setValue(mCurrentList.getItemsInList().get(getAdapterPosition()));
+                            .child("checked").setValue(i.toggleChecked());
+
+
+                    Log.v(TAG, "OnClick Index: " + getAdapterPosition() + " Name: " + i.getName() + " Boolean: " + i.checked);
+
                 }
             });
         }
@@ -209,8 +231,11 @@ public class ItemsInListFragement extends Fragment {
         @Override
         public void onBindViewHolder(ViewHolder holder, int position) {
             Item i = mCurrentList.getItemsInList().get(position);
+
             holder.itemName.setText(i.getName());
             holder.checkBox.setChecked(i.checked);
+            //Log.v(TAG, "OnBind Index: " + position + " Name: " + i.getName() + " Boolean: " + i.checked);
+
 
             if (mCurrentList.anyItemsChecked())
                 enableDeleteFab();
@@ -233,6 +258,10 @@ public class ItemsInListFragement extends Fragment {
             notifyDataSetChanged();
         }
 
+        public void updateList(int pos) {
+            notifyItemChanged(pos);
+        }
+
 
     }
 
@@ -246,7 +275,8 @@ public class ItemsInListFragement extends Fragment {
             }
         }
         mCurrentList.getItemsInList().removeAll(toRemove);
-        Database.getDBRef().getReference("lists").child(mCurrentList.getName())
+        updateAction = action.deleted;
+        Database.getDB().getReference("users").child(User.getUid()).child(mCurrentList.getName())
                 .child("itemsInList").setValue(al);
         disableDeleteFab();
     }
@@ -281,6 +311,11 @@ public class ItemsInListFragement extends Fragment {
     public void onDetach() {
         super.onDetach();
         mListener = null;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
     }
 
     public interface OnFragmentInteractionListener {

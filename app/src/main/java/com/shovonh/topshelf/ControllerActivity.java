@@ -1,6 +1,7 @@
 package com.shovonh.topshelf;
 
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
@@ -16,6 +17,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -33,16 +36,15 @@ public class ControllerActivity extends AppCompatActivity implements AllListsFra
     Fragment mAllListsFragment;
     Fragment mItemsinListFragment;
     FloatingActionButton fab;
-    Lists mMainList;
-
-    public static ArrayList<Lists> mAllLists = new ArrayList<>();
+    Toolbar toolbar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_controller);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
 
         mAllListsFragment = AllListsFragment.newInstance();
 
@@ -52,6 +54,8 @@ public class ControllerActivity extends AppCompatActivity implements AllListsFra
 
         fab = (FloatingActionButton) findViewById(R.id.fab);
         setFabForNewLists();
+
+
 
     }
 
@@ -82,6 +86,7 @@ public class ControllerActivity extends AppCompatActivity implements AllListsFra
         if (fm.getBackStackEntryCount() > 0) {
             fab.show();
             fm.popBackStack();
+            toolbar.setTitle("TopShelf");
             setFabForNewLists();
         } else {
             super.onBackPressed();
@@ -92,7 +97,10 @@ public class ControllerActivity extends AppCompatActivity implements AllListsFra
     public void openList(Lists li) {
         fab.hide();
         mItemsinListFragment = new ItemsInListFragement().newInstance(li);
-        fm.beginTransaction().addToBackStack("").replace(R.id.fragmentContainer, mItemsinListFragment).commit();
+        toolbar.setTitle(li.getName());
+        fm.beginTransaction()
+                .setCustomAnimations(R.anim.left_in, R.anim.right_out)
+                .addToBackStack("").replace(R.id.fragmentContainer, mItemsinListFragment).commit();
 
     }
 
@@ -114,7 +122,7 @@ public class ControllerActivity extends AppCompatActivity implements AllListsFra
     }
 
     void setFabForNewLists(){
-        fab.setImageResource(R.drawable.ic_add_circle_outline_black_24dp);
+        fab.setImageResource(R.drawable.ic_add_black_24dp);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {

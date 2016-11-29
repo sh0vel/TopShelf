@@ -16,7 +16,8 @@
         app:checkedColor="@color/colorAccent"
         app:lineColor="#fff"
         app:lineWidth="1.2dp"
-        app:unCheckColor="@color/colorAccent" />
+        app:unCheckColor="@color/colorAccent"
+        />
 
     <TextView
         android:id="@+id/item_name"
